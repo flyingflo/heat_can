@@ -29,7 +29,7 @@ const char* ssid = "WIFI_SSID";
 const char* password = "WIFI_PASSWD";
 const char* mqtt_server = "mqtt.example.org";
 
-const String topic_prefix = "/heizung/heatp/";
+const String topic_prefix = "/heizung/burner/";
 const String topic_status_conn = topic_prefix + "status/connection";
 const String topic_sub = topic_prefix + "cmd/#";
 const String topic_ping = topic_prefix + "status/ping";
@@ -49,7 +49,7 @@ void setup_wifi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
-  WiFi.hostname("ESP-heatp");
+  WiFi.hostname("ESP-burner");
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -78,11 +78,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   // Switch on the LED if an 1 was received as first character
   if ((char)payload[0] == '1') {
-    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
     // but actually the LED is on; this is because
     // it is active low on the ESP-01)
   } else {
-    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+    digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
   }
 
 }
