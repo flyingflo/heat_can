@@ -200,7 +200,7 @@ void loop() {
   if (now - lastMsg > 10000) {
     lastMsg = now;
     ++ping_counter;
-    snprintf (msg, MSG_BUFFER_SIZE, "ping #%d", ping_counter);
+    snprintf (msg, MSG_BUFFER_SIZE, "ping #%d RSSI %d", ping_counter, WiFi.RSSI());
     Serial.print("Publish message: ");
     Serial.println(msg);
     client.publish(topic_ping.c_str(), msg);
