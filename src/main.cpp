@@ -29,6 +29,7 @@ const char* ssid = "WIFI_SSID";
 const char* password = "WIFI_PASSWD";
 const char* mqtt_server = "mqtt.example.org";
 
+#define HOSTNAME "ESP-burner"
 #define TOPIC_PREFIX "/heizung/burner/"
 const char* topic_status_conn = TOPIC_PREFIX  "status/connection";
 const char* topic_sub = TOPIC_PREFIX "cmd/#";
@@ -52,7 +53,7 @@ void setup_wifi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
-  WiFi.hostname("ESP-burner");
+  WiFi.hostname(HOSTNAME);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -106,10 +107,8 @@ void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = WiFi.hostname();
     // Attempt to connect
-    if (client.connect(clientId.c_str(), topic_status_conn, false, true, "Offline")) {
+    if (client.connect(HOSTNAME, topic_status_conn, false, true, "Offline")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish(topic_status_conn, "Online, HELLO", true);
