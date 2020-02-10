@@ -38,7 +38,7 @@ const String topic_status_lockout = topic_prefix + "status/lockout";
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
-#define MSG_BUFFER_SIZE	(50)
+#define MSG_BUFFER_SIZE	(128)
 char msg[MSG_BUFFER_SIZE];
 int ping_counter = 0;    
 bool lockout = false; // burner lockout
@@ -200,7 +200,7 @@ void loop() {
   if (now - lastMsg > 10000) {
     lastMsg = now;
     ++ping_counter;
-    snprintf (msg, MSG_BUFFER_SIZE, "ping #%d RSSI %d", ping_counter, WiFi.RSSI());
+    snprintf (msg, MSG_BUFFER_SIZE, "ping #%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
     Serial.print("Publish message: ");
     Serial.println(msg);
     client.publish(topic_ping.c_str(), msg);
