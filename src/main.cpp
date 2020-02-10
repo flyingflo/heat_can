@@ -32,7 +32,7 @@ const char* mqtt_server = "mqtt.example.org";
 const String topic_prefix = "/heizung/burner/";
 const String topic_status_conn = topic_prefix + "status/connection";
 const String topic_sub = topic_prefix + "cmd/#";
-const String topic_ping = topic_prefix + "status/ping";
+const String topic_ping = topic_prefix + "ping";
 const String topic_status_lockout = topic_prefix + "status/lockout";
 
 WiFiClient espClient;
@@ -197,7 +197,7 @@ void loop() {
   ArduinoOTA.handle();
 
   unsigned long now = millis();
-  if (now - lastMsg > 2000) {
+  if (now - lastMsg > 10000) {
     lastMsg = now;
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "ping #%d", ping_counter);
