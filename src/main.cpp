@@ -33,6 +33,7 @@ const String topic_prefix = "/heizung/burner/";
 const String topic_status_conn = topic_prefix + "status/connection";
 const String topic_sub = topic_prefix + "cmd/#";
 const String topic_ping = topic_prefix + "status/ping";
+const String topic_status_lockout = topic_prefix + "status/lockout";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -40,6 +41,8 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(50)
 char msg[MSG_BUFFER_SIZE];
 int ping_counter = 0;    
+bool lockout = false; // burner lockout
+
 
 void setup_wifi() {
 
@@ -67,6 +70,16 @@ void setup_wifi() {
   Serial.println(WiFi.hostname());
 }
 
+void publish_lockout() {
+  const char* m;
+  if (lockout) {
+    m = "1";
+  } else {
+    m = "0";
+  }
+  client.publish(topic_status_lockout.c_str(), m, true);
+}
+
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
@@ -79,12 +92,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // Switch on the LED if an 1 was received as first character
   if ((char)payload[0] == '1') {
     digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    lockout = true;
     // but actually the LED is on; this is because
     // it is active low on the ESP-01)
   } else {
     digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
+    lockout = false;
   }
-
+  publish_lockout();
 }
 
 void reconnect() {
@@ -100,6 +115,7 @@ void reconnect() {
       client.publish(topic_status_conn.c_str(), "Online, HELLO", true);
       // ... and resubscribe
       client.subscribe(topic_sub.c_str());
+      publish_lockout();
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -162,6 +178,8 @@ void setup_ota() {
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  digitalWrite(LED_BUILTIN, HIGH); 
+  lockout = false;
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
