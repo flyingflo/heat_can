@@ -94,10 +94,10 @@ void reconnect() {
     // Create a random client ID
     String clientId = WiFi.hostname();
     // Attempt to connect
-    if (client.connect(clientId.c_str(), topic_status_conn.c_str(), 0, 0, "Offline")) {
+    if (client.connect(clientId.c_str(), topic_status_conn.c_str(), false, true, "Offline")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish(topic_status_conn.c_str(), "Online, HELLO");
+      client.publish(topic_status_conn.c_str(), "Online, HELLO", true);
       // ... and resubscribe
       client.subscribe(topic_sub.c_str());
     } else {
