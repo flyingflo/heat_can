@@ -29,11 +29,11 @@ const char* ssid = "WIFI_SSID";
 const char* password = "WIFI_PASSWD";
 const char* mqtt_server = "mqtt.example.org";
 
-const String topic_prefix = "/heizung/burner/";
-const String topic_status_conn = topic_prefix + "status/connection";
-const String topic_sub = topic_prefix + "cmd/#";
-const String topic_ping = topic_prefix + "ping";
-const String topic_status_lockout = topic_prefix + "status/lockout";
+#define TOPIC_PREFIX "/heizung/burner/"
+const char* topic_status_conn = TOPIC_PREFIX  "status/connection";
+const char* topic_sub = TOPIC_PREFIX "cmd/#";
+const char* topic_ping = TOPIC_PREFIX "ping";
+const char* topic_status_lockout = TOPIC_PREFIX "status/lockout";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -77,7 +77,7 @@ void publish_lockout() {
   } else {
     m = "0";
   }
-  client.publish(topic_status_lockout.c_str(), m, true);
+  client.publish(topic_status_lockout, m, true);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -109,12 +109,12 @@ void reconnect() {
     // Create a random client ID
     String clientId = WiFi.hostname();
     // Attempt to connect
-    if (client.connect(clientId.c_str(), topic_status_conn.c_str(), false, true, "Offline")) {
+    if (client.connect(clientId.c_str(), topic_status_conn, false, true, "Offline")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish(topic_status_conn.c_str(), "Online, HELLO", true);
+      client.publish(topic_status_conn, "Online, HELLO", true);
       // ... and resubscribe
-      client.subscribe(topic_sub.c_str());
+      client.subscribe(topic_sub);
       publish_lockout();
     } else {
       Serial.print("failed, rc=");
@@ -200,9 +200,9 @@ void loop() {
   if (now - lastMsg > 10000) {
     lastMsg = now;
     ++ping_counter;
-    snprintf (msg, MSG_BUFFER_SIZE, "ping #%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
+    snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
     Serial.print("Publish message: ");
     Serial.println(msg);
-    client.publish(topic_ping.c_str(), msg);
+    client.publish(topic_ping, msg);
   }
 }
