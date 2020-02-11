@@ -171,7 +171,7 @@ void setup_ota() {
       Serial.println("End Failed");
     }
   });
-  ArduinoOTA.begin();
+  ArduinoOTA.begin(false);
   Serial.println("OTA MDNS Hostname " + ArduinoOTA.getHostname());
 }
 
@@ -188,6 +188,7 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+  yield();
 
   if (!client.connected()) {
     reconnect();
