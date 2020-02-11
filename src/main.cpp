@@ -187,13 +187,13 @@ void setup() {
 }
 
 void loop() {
+  ArduinoOTA.handle();
 
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
 
-  ArduinoOTA.handle();
 
   unsigned long now = millis();
   if (now - lastMsg > 10000) {
