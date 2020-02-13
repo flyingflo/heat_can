@@ -17,6 +17,7 @@
   - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
   - Select your ESP8266 in "Tools -> Board"
 */
+#define NO_GLOBAL_MDNS
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
@@ -42,8 +43,13 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(128)
 char msg[MSG_BUFFER_SIZE];
 int ping_counter = 0;    
-bool lockout = false; // burner lockout
 
+bool lockout = false; // burner lockout
+bool _pub_lockout = false;
+int _burner_on = -1;
+
+const uint8_t pin_lockout = D4;
+const uint8_t pin_burning = D2;
 
 void setup_wifi() {
 
@@ -72,35 +78,20 @@ void setup_wifi() {
 }
 
 void publish_lockout() {
-  const char* m;
-  if (lockout) {
-    m = "1";
-  } else {
-    m = "0";
-  }
-  client.publish(topic_status_lockout, m, true);
+  client.publish(topic_status_lockout, lockout ? "1" : "0", true);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (unsigned i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+  if (strcmp(topic, TOPIC_PREFIX "cmd/lockout") == 0 && length > 0) {
+    if ((char)payload[0] == '1') {
+      digitalWrite(pin_lockout, LOW);
+      lockout = true;
+    } else {
+      digitalWrite(pin_lockout, HIGH);
+      lockout = false;
+    }
+    _pub_lockout =  true; 
   }
-  Serial.println();
-
-  // Switch on the LED if an 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    lockout = true;
-    // but actually the LED is on; this is because
-    // it is active low on the ESP-01)
-  } else {
-    digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
-    lockout = false;
-  }
-  publish_lockout();
 }
 
 void reconnect() {
@@ -114,7 +105,7 @@ void reconnect() {
       client.publish(topic_status_conn, "Online, HELLO", true);
       // ... and resubscribe
       client.subscribe(topic_sub);
-      publish_lockout();
+      _pub_lockout = true;
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -176,9 +167,11 @@ void setup_ota() {
 }
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  digitalWrite(LED_BUILTIN, HIGH); 
+  pinMode(pin_lockout, OUTPUT);
+  digitalWrite(pin_lockout, HIGH); 
   lockout = false;
+  pinMode(pin_burning, INPUT_PULLUP);
+
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
@@ -195,14 +188,23 @@ void loop() {
   }
   client.loop();
 
+  yield();
+  if (_pub_lockout) {
+    publish_lockout();
+    _pub_lockout = false;
+  }
+
+  int burner_on = !digitalRead(pin_burning);
+  if (burner_on != _burner_on) {
+    client.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
+    _burner_on = burner_on;
+  }
 
   unsigned long now = millis();
   if (now - lastMsg > 10000) {
     lastMsg = now;
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
-    Serial.print("Publish message: ");
-    Serial.println(msg);
     client.publish(topic_ping, msg);
   }
 }
