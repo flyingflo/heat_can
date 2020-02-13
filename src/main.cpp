@@ -23,6 +23,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
+#include <ESP8266HTTPClient.h>
 
 // Update these with values suitable for your network.
 
@@ -179,6 +180,18 @@ void setup() {
   setup_ota();
 }
 
+void logVZBurner(int burn) {
+  WiFiClient cl;
+  HTTPClient http;
+  String url( burn ? 
+    "http://pi3.lan/middleware/data/81b71d80-4ea8-11ea-a315-591170d780b2.json?value=100"
+   : "http://pi3.lan/middleware/data/81b71d80-4ea8-11ea-a315-591170d780b2.json?value=0");
+  http.begin(cl, url);
+  int rc = http.POST("");
+  if (rc != HTTP_CODE_OK) {
+    client.publish(TOPIC_PREFIX "/status/vzError", http.errorToString(rc).c_str());
+  }
+}
 void loop() {
   ArduinoOTA.handle();
   yield();
@@ -196,8 +209,9 @@ void loop() {
 
   int burner_on = !digitalRead(pin_burning);
   if (burner_on != _burner_on) {
-    client.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
     _burner_on = burner_on;
+    client.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
+    logVZBurner(burner_on);
   }
 
   unsigned long now = millis();
