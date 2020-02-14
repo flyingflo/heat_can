@@ -180,6 +180,8 @@ void setup() {
   setup_ota();
 }
 
+static unsigned long lastVZLog;
+
 void logVZBurner(int burn) {
   WiFiClient cl;
   HTTPClient http;
@@ -191,6 +193,7 @@ void logVZBurner(int burn) {
   if (rc != HTTP_CODE_OK) {
     client.publish(TOPIC_PREFIX "/status/vzError", http.errorToString(rc).c_str());
   }
+  lastVZLog = millis();
 }
 void loop() {
   ArduinoOTA.handle();
@@ -220,5 +223,11 @@ void loop() {
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
     client.publish(topic_ping, msg);
+  }
+
+  yield();
+  
+  if (now - lastVZLog > 20*60*1000) {
+    logVZBurner(_burner_on);
   }
 }
