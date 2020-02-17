@@ -29,8 +29,8 @@ unsigned long lastMsg = 0;
 char msg[MSG_BUFFER_SIZE];
 int ping_counter = 0;    
 
-bool lockout = false; // burner lockout
-bool _pub_lockout = false;
+volatile bool lockout = false; // burner lockout
+volatile bool _pub_lockout = false;
 int _burner_on = -1;
 
 const uint8_t pin_lockout = D4;
