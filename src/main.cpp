@@ -1,21 +1,5 @@
 /*
- Basic ESP8266 MQTT example
- This sketch demonstrates the capabilities of the pubsub library in combination
- with the ESP8266 board/library.
- It connects to an MQTT server then:
-  - publishes "hello world" to the topic "outTopic" every two seconds
-  - subscribes to the topic "inTopic", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "inTopic" is an 1, switch ON the ESP Led,
-    else switch it off
- It will reconnect to the server if the connection is lost using a blocking
- reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
- achieve the same result without blocking the main loop.
- To install the ESP8266 board, (using Arduino 1.6.4+):
-  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
-       http://arduino.esp8266.com/stable/package_esp8266com_index.json
-  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
-  - Select your ESP8266 in "Tools -> Board"
+Based on Basic ESP8266 MQTT example and OTA Example
 */
 #define NO_GLOBAL_MDNS
 #include <ESP8266WiFi.h>
@@ -25,21 +9,21 @@
 #include <PubSubClient.h>
 #include <ESP8266HTTPClient.h>
 
+#include "common.h"
+
 // Update these with values suitable for your network.
 
 const char* ssid = "WIFI_SSID";
 const char* password = "WIFI_PASSWD";
 const char* mqtt_server = "mqtt.example.org";
 
-#define HOSTNAME "ESP-burner"
-#define TOPIC_PREFIX "/heizung/burner/"
 const char* topic_status_conn = TOPIC_PREFIX  "status/connection";
 const char* topic_sub = TOPIC_PREFIX "cmd/#";
 const char* topic_ping = TOPIC_PREFIX "ping";
 const char* topic_status_lockout = TOPIC_PREFIX "status/lockout";
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+static WiFiClient mqttSocket;
+PubSubClient mqttClient(mqttSocket);
 unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(128)
 char msg[MSG_BUFFER_SIZE];
@@ -79,7 +63,7 @@ void setup_wifi() {
 }
 
 void publish_lockout() {
-  client.publish(topic_status_lockout, lockout ? "1" : "0", true);
+  mqttClient.publish(topic_status_lockout, lockout ? "1" : "0", true);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -97,19 +81,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void reconnect() {
   // Loop until we're reconnected
-  while (!client.connected()) {
+  while (!mqttClient.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(HOSTNAME, topic_status_conn, false, true, "Offline")) {
+    if (mqttClient.connect(HOSTNAME, topic_status_conn, false, true, "Offline")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish(topic_status_conn, "Online, HELLO", true);
+      mqttClient.publish(topic_status_conn, "Online, HELLO", true);
       // ... and resubscribe
-      client.subscribe(topic_sub);
+      mqttClient.subscribe(topic_sub);
       _pub_lockout = true;
     } else {
       Serial.print("failed, rc=");
-      Serial.print(client.state());
+      Serial.print(mqttClient.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
@@ -175,8 +159,8 @@ void setup() {
 
   Serial.begin(115200);
   setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+  mqttClient.setServer(mqtt_server, 1883);
+  mqttClient.setCallback(callback);
   setup_ota();
 }
 
@@ -191,7 +175,7 @@ void logVZBurner(int burn) {
   http.begin(cl, url);
   int rc = http.POST("");
   if (rc != HTTP_CODE_OK) {
-    client.publish(TOPIC_PREFIX "/status/vzError", http.errorToString(rc).c_str());
+    mqttClient.publish(TOPIC_PREFIX "/status/vzError", http.errorToString(rc).c_str());
   }
   lastVZLog = millis();
 }
@@ -199,10 +183,10 @@ void loop() {
   ArduinoOTA.handle();
   yield();
 
-  if (!client.connected()) {
+  if (!mqttClient.connected()) {
     reconnect();
   }
-  client.loop();
+  mqttClient.loop();
 
   yield();
   if (_pub_lockout) {
@@ -213,7 +197,7 @@ void loop() {
   int burner_on = !digitalRead(pin_burning);
   if (burner_on != _burner_on) {
     _burner_on = burner_on;
-    client.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
+    mqttClient.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
     logVZBurner(burner_on);
   }
 
@@ -222,7 +206,7 @@ void loop() {
     lastMsg = now;
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
-    client.publish(topic_ping, msg);
+    mqttClient.publish(topic_ping, msg);
   }
 
   yield();

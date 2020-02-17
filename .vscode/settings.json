@@ -23,5 +23,6 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "C/C++ Include Guard.Macro Type": "Filename"
 }
