@@ -355,8 +355,8 @@ int MCP2515Class::filterExtended(long id, long mask)
 
 int MCP2515Class::observe()
 {
-  writeRegister(REG_CANCTRL, 0x80);
-  if (readRegister(REG_CANCTRL) != 0x80) {
+  writeRegister(REG_CANCTRL, 0x60);
+  if (readRegister(REG_CANCTRL) != 0x60) {
     return 0;
   }
 
@@ -375,8 +375,8 @@ int MCP2515Class::loopback()
 
 int MCP2515Class::sleep()
 {
-  writeRegister(REG_CANCTRL, 0x01);
-  if (readRegister(REG_CANCTRL) != 0x01) {
+  writeRegister(REG_CANCTRL, 0x20);
+  if (readRegister(REG_CANCTRL) != 0x20) {
     return 0;
   }
 
