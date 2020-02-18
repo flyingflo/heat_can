@@ -10,6 +10,7 @@ Based on Basic ESP8266 MQTT example and OTA Example
 #include <ESP8266HTTPClient.h>
 
 #include "common.h"
+#include "logamaticCan.h"
 
 // Update these with values suitable for your network.
 
@@ -76,7 +77,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
       lockout = false;
     }
     _pub_lockout =  true; 
+    return;
   }
+  LogamaticCAN.mqttRecv(topic, payload, length);
 }
 
 void reconnect() {
@@ -158,6 +161,7 @@ void setup() {
   pinMode(pin_burning, INPUT_PULLUP);
 
   Serial.begin(115200);
+  LogamaticCAN.setup();
   setup_wifi();
   mqttClient.setServer(mqtt_server, 1883);
   mqttClient.setCallback(callback);
@@ -214,4 +218,8 @@ void loop() {
   if (now - lastVZLog > 20*60*1000) {
     logVZBurner(_burner_on);
   }
+
+  yield();
+
+  LogamaticCAN.loop();
 }
