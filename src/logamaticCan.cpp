@@ -81,11 +81,12 @@ void logamaticCan::handleRecv() {
     static char buf[128];
     int d;
     int sz = CAN.parsePacket();
+    yield();
     if (sz == 0) {
         return;
     }
     _lastrecv = millis();
-    int bi = snprintf(buf, sizeof(buf), "%lu;%x;%x;%lx;", _lastrecv, CAN.packetDlc(), CAN.packetRtr(), CAN.packetId());
+    int bi = snprintf(buf, sizeof(buf), "%x;%lx;", CAN.packetRtr(), CAN.packetId());
     while ((d = CAN.read()) >= 0) {
         bi += snprintf(buf + bi, sizeof(buf) - bi, "%02x ", d);
     }
