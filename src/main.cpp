@@ -7,7 +7,6 @@ Based on Basic ESP8266 MQTT example and OTA Example
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
-#include <ESP8266HTTPClient.h>
 
 #include "common.h"
 #include "logamaticCan.h"
@@ -25,10 +24,6 @@ const char* topic_status_lockout = TOPIC_PREFIX "status/lockout";
 
 static WiFiClient mqttSocket;
 PubSubClient mqttClient(mqttSocket);
-unsigned long lastMsg = 0;
-#define MSG_BUFFER_SIZE	(128)
-char msg[MSG_BUFFER_SIZE];
-int ping_counter = 0;    
 
 volatile bool lockout = false; // burner lockout
 volatile bool _pub_lockout = false;
@@ -168,22 +163,42 @@ void setup() {
   setup_ota();
 }
 
-static unsigned long lastVZLog;
-
-void logVZBurner(int burn) {
-  WiFiClient cl;
-  HTTPClient http;
-  String url( burn ? 
-    "http://pi3.lan/middleware/data/81b71d80-4ea8-11ea-a315-591170d780b2.json?value=100"
-   : "http://pi3.lan/middleware/data/81b71d80-4ea8-11ea-a315-591170d780b2.json?value=0");
-  http.begin(cl, url);
-  int rc = http.POST("");
-  if (rc != HTTP_CODE_OK) {
-    mqttClient.publish(TOPIC_PREFIX "/status/vzError", http.errorToString(rc).c_str());
+static unsigned long loopentry;
+static void pingStats() {
+  static unsigned long lastMsg = 0;
+  const int MSG_BUFFER_SIZE = 128;
+  static char msg[MSG_BUFFER_SIZE];
+  static int ping_counter = 0;    
+  static unsigned long last = 0;
+  static unsigned long max = 0;
+  static unsigned count = 0; 
+  static unsigned maxrun = 0;
+  count++;
+  unsigned long now = millis();
+  if (now - last > max) {
+    max = now - last;
+    last = now;
   }
-  lastVZLog = millis();
+
+  if (now - loopentry > maxrun) {
+    maxrun = now - loopentry;
+  }
+  unsigned long interval = now - lastMsg;
+  if (interval > 10000) {
+    int rate = count * 1000 / interval;
+    ++ping_counter;
+    snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s interval_loop max %lu avg %d/s runt_loop max %u", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str(), max, rate, maxrun);
+    mqttClient.publish(topic_ping, msg);
+    lastMsg = now;
+    count = 0;
+    max = 0;
+    maxrun = 0;
+  }
 }
+
+
 void loop() {
+  loopentry = millis();
   ArduinoOTA.handle();
   yield();
 
@@ -198,28 +213,16 @@ void loop() {
     _pub_lockout = false;
   }
 
+  yield();
+
   int burner_on = !digitalRead(pin_burning);
   if (burner_on != _burner_on) {
     _burner_on = burner_on;
     mqttClient.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
-    logVZBurner(burner_on);
-  }
-
-  unsigned long now = millis();
-  if (now - lastMsg > 10000) {
-    lastMsg = now;
-    ++ping_counter;
-    snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str());
-    mqttClient.publish(topic_ping, msg);
-  }
-
-  yield();
-  
-  if (now - lastVZLog > 20*60*1000) {
-    logVZBurner(_burner_on);
   }
 
   yield();
 
   LogamaticCAN.loop();
+  pingStats();
 }
