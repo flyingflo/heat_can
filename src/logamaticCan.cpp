@@ -78,19 +78,18 @@ void logamaticCan::mqttRecv(char* topic, byte* payload, unsigned int length) {
 }
 
 void logamaticCan::handleRecv() {
-    static char buf[128];
+    static char buf[42];
     int d;
-    int sz = CAN.parsePacket();
-    yield();
-    if (sz == 0) {
-        return;
+    int sz;
+    while((sz = CAN.parsePacket()) > 0) {
+        _lastrecv = millis();
+        int bi = snprintf(buf, sizeof(buf), "%x;%lx;", CAN.packetRtr(), CAN.packetId());
+        while ((d = CAN.read()) >= 0) {
+            bi += snprintf(buf + bi, sizeof(buf) - bi, "%02x ", d);
+        }
+        mqttClient.publish(TOPIC_PREFIX "can/raw/recv/", buf);
+        yield();
     }
-    _lastrecv = millis();
-    int bi = snprintf(buf, sizeof(buf), "%x;%lx;", CAN.packetRtr(), CAN.packetId());
-    while ((d = CAN.read()) >= 0) {
-        bi += snprintf(buf + bi, sizeof(buf) - bi, "%02x ", d);
-    }
-    mqttClient.publish(TOPIC_PREFIX "can/raw/recv/", buf);
 }
 void logamaticCan::handleBitrate() {
     if (_resetBitrate) {
