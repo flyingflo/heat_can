@@ -77,25 +77,33 @@ void callback(char* topic, byte* payload, unsigned int length) {
   LogamaticCAN.mqttRecv(topic, payload, length);
 }
 
-void reconnect() {
+bool try_mqtt_reconnect() {
+  static unsigned long lasttry = 0;
   // Loop until we're reconnected
-  while (!mqttClient.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (mqttClient.connect(HOSTNAME, topic_status_conn, false, true, "Offline")) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      mqttClient.publish(topic_status_conn, "Online, HELLO", true);
-      // ... and resubscribe
-      mqttClient.subscribe(topic_sub);
-      _pub_lockout = true;
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
+  if (mqttClient.connected()) {
+    return true;
+  }
+  unsigned long now = millis();
+  if (now - lasttry < 200) {
+    // wait a little longer ..
+    return false;
+  }
+  lasttry = now;
+  Serial.print("Attempting MQTT connection...");
+  // Attempt to connect
+  if (mqttClient.connect(HOSTNAME, topic_status_conn, false, true, "Offline")) {
+    Serial.println("connected");
+    // Once connected, publish an announcement...
+    mqttClient.publish(topic_status_conn, "Online, HELLO", true);
+    // ... and resubscribe
+    mqttClient.subscribe(topic_sub);
+    _pub_lockout = true;
+    return true;
+  } else {
+    Serial.print("failed, rc=");
+    Serial.print(mqttClient.state());
+    Serial.println(" try again in 5 seconds");
+    return false;
   }
 }
 
@@ -202,10 +210,9 @@ void loop() {
   ArduinoOTA.handle();
   yield();
 
-  if (!mqttClient.connected()) {
-    reconnect();
-  }
-  mqttClient.loop();
+  bool mqtt_connected = try_mqtt_reconnect();
+  if (mqtt_connected) {
+    mqttClient.loop();
 
   yield();
   if (_pub_lockout) {
