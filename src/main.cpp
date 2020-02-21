@@ -196,6 +196,7 @@ static void pingStats() {
     int rate = count * 1000 / interval;
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s interval_loop max %lu avg %d/s runt_loop max %u", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str(), max, rate, maxrun);
+    Serial.println(msg);
     mqttClient.publish(topic_ping, msg);
     lastMsg = now;
     count = 0;
@@ -214,22 +215,23 @@ void loop() {
   if (mqtt_connected) {
     mqttClient.loop();
 
-  yield();
-  if (_pub_lockout) {
-    publish_lockout();
-    _pub_lockout = false;
+    yield();
+    if (_pub_lockout) {
+      publish_lockout();
+      _pub_lockout = false;
+    }
+
+    yield();
+
+    int burner_on = !digitalRead(pin_burning);
+    if (burner_on != _burner_on) {
+      _burner_on = burner_on;
+      mqttClient.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
+    }
+
+    yield();
+
+    LogamaticCAN.loop();
   }
-
-  yield();
-
-  int burner_on = !digitalRead(pin_burning);
-  if (burner_on != _burner_on) {
-    _burner_on = burner_on;
-    mqttClient.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
-  }
-
-  yield();
-
-  LogamaticCAN.loop();
   pingStats();
 }
