@@ -176,7 +176,7 @@ static void pingStats() {
   static unsigned long lastMsg = 0;
   const int MSG_BUFFER_SIZE = 128;
   static char msg[MSG_BUFFER_SIZE];
-  static int ping_counter = 0;    
+  static unsigned ping_counter = 0;    
   static unsigned long last = 0;
   static unsigned long max = 0;
   static unsigned count = 0; 
@@ -195,7 +195,7 @@ static void pingStats() {
   if (interval > 10000) {
     int rate = count * 1000 / interval;
     ++ping_counter;
-    snprintf (msg, MSG_BUFFER_SIZE, "#%d RSSI %d, BSSID %s interval_loop max %lu avg %d/s runt_loop max %u", ping_counter, WiFi.RSSI(), WiFi.BSSIDstr().c_str(), max, rate, maxrun);
+    snprintf (msg, MSG_BUFFER_SIZE, "RSSI %d, BSSID %s interval_loop max %lu avg %d/s runt_loop max %u #%u", WiFi.RSSI(), WiFi.BSSIDstr().c_str(), max, rate, maxrun, ping_counter);
     Serial.println(msg);
     mqttClient.publish(topic_ping, msg);
     lastMsg = now;
