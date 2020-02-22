@@ -87,7 +87,6 @@ void logamaticCan::handleRecv() {
         while ((d = CAN.read()) >= 0) {
             bi += snprintf(buf + bi, sizeof(buf) - bi, "%02x ", d);
         }
-        bi += 1;      // snprintf doesn't count the '\0'
         if (mqttClient.beginPublish(TOPIC_PREFIX "can/raw/recv/", bi, false)) {
             mqttClient.write((uint8_t*)buf, bi);
             mqttClient.endPublish();
