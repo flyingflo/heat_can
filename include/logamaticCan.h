@@ -7,6 +7,7 @@ class logamaticCan {
 
     void handleBitrate();
     void handleRecv();
+    void handleSend(byte* payload, unsigned int length);
 public:
     void setup();
     void loop();

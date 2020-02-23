@@ -27,6 +27,8 @@ struct CanPacket {
     uint8_t datalen;
 };
 
+static char buf[42];
+
 static volatile CanPacket _packet;
 
 static void receive(int size) {
@@ -65,7 +67,7 @@ void logamaticCan::setup() {
 }
 
 void logamaticCan::mqttRecv(char* topic, byte* payload, unsigned int length) {
-    if (strcmp(TOPIC_PREFIX "cmd/can/ctrl/setBitrate", topic) == 0 && length > 0) {
+    if (strcmp(TOPIC_PREFIX "can/ctrl/setBitrate", topic) == 0 && length > 0) {
         char buf[3];
         memcpy(buf, payload, length > 2 ? 2 : length);
         buf[2] = '\0';
@@ -75,10 +77,37 @@ void logamaticCan::mqttRecv(char* topic, byte* payload, unsigned int length) {
             _resetBitrate = true;
         }
     }
+    if (strcmp(TOPIC_PREFIX "can/send", topic) == 0 && length > 0) {
+        handleSend(payload, length);
+    }
+}
+
+void logamaticCan::handleSend(byte* payload, unsigned int length) {
+    int rtr;
+    long id;
+    uint8_t data[8];
+    unsigned l = sizeof(buf) -1 < length ? sizeof(buf) : length;
+    memcpy(buf, payload, l);
+    buf[l] = '\0';
+    int r = sscanf(buf, "%x;%lx; %hhx %hhx %hhx %hhx %hhx %hhx %hhx %hhx", 
+            &rtr, &id, &data[0], &data[1], &data[2], &data[3], 
+            &data[4], &data[5], &data[6], &data[7]);
+    if (r != 10) {
+        // just ignore invalid formated payloads
+        return;
+    }
+    bool ok = CAN.beginPacket(id, rtr) &&
+    CAN.write(data, 8) == 8 &&
+    CAN.endPacket();
+
+    if (!ok) {
+        const char errmsg[] = "Error CAN write";
+        mqttClient.beginPublish(TOPIC_PREFIX "/can/err", sizeof(errmsg), false);
+        mqttClient.write((uint8_t*)errmsg, sizeof(errmsg));
+    }
 }
 
 void logamaticCan::handleRecv() {
-    static char buf[42];
     int d;
     int sz;
     while((sz = CAN.parsePacket()) > 0) {
