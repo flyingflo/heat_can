@@ -17,39 +17,7 @@ static const long bitrates[] = {
       (long)5E3, 
  };
 
-struct CanPacket {
-    long id;
-    bool rtr;
-    bool fresh;
-    int overruns;
-    uint8_t dlc;
-    uint8_t data[8];
-    uint8_t datalen;
-};
-
 static char buf[42];
-
-static volatile CanPacket _packet;
-
-static void receive(int size) {
-    if (_packet.fresh) {
-        _packet.overruns++;
-        return;
-    }
-    _packet.id = CAN.packetId();
-    _packet.rtr = CAN.packetRtr();
-    _packet.dlc = CAN.packetDlc();
-    int i;
-    for (i = 0; i < size; i++) {
-        int b = CAN.read();
-        if (b < 0) {
-            break;
-        }
-        _packet.data[i] = (uint8_t)b;
-    }
-    _packet.datalen = i;
-    _packet.fresh = true;
-}
 
 void logamaticCan::setup() {
     // SPI.pins(); //use the default HSPI pins
@@ -67,16 +35,6 @@ void logamaticCan::setup() {
 }
 
 void logamaticCan::mqttRecv(char* topic, byte* payload, unsigned int length) {
-    if (strcmp(TOPIC_PREFIX "can/ctrl/setBitrate", topic) == 0 && length > 0) {
-        char buf[3];
-        memcpy(buf, payload, length > 2 ? 2 : length);
-        buf[2] = '\0';
-        int p = atoi(buf);
-        if (p >=0 && p < (sizeof(bitrates) / sizeof(bitrates[0]))) {
-            _bitrateIdx = p;
-            _resetBitrate = true;
-        }
-    }
     if (strcmp(TOPIC_PREFIX "can/send", topic) == 0 && length > 0) {
         handleSend(payload, length);
     }
@@ -122,41 +80,9 @@ void logamaticCan::handleRecv() {
         }
     }
 }
-void logamaticCan::handleBitrate() {
-    if (_resetBitrate) {
-        CAN.end();
-        int rc = CAN.begin(bitrates[_bitrateIdx]);
-        Serial.print("CAN.begin(");
-        Serial.print(bitrates[_bitrateIdx]);
-        Serial.print(")-> ");
-        Serial.println(rc);
-        
-        char msg[16];
-        unsigned l = snprintf(msg, sizeof(msg), "%s %ld", rc == 1 ? "OK" : "NG", bitrates[_bitrateIdx]);
-        mqttClient.publish(TOPIC_PREFIX "can/status/resetBitrate", msg, l);
-        _resetBitrate = false;
-    }
-}
-
-static void loopbackTest() {
-    static bool once = false;
-
-    if (!once && millis() > 10000) {
-        int rc = CAN.loopback();
-        Serial.print("loopback");
-        Serial.println(rc);
-        CAN.beginPacket(0xbc);
-        CAN.write(0x42);
-        rc = CAN.endPacket();
-        Serial.print("send");
-        Serial.println(rc);
-        once = true;
-    }
-}
 
 void logamaticCan::loop() {
     handleRecv();
-    handleBitrate();
 
 }
 
