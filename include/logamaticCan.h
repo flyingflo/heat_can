@@ -1,3 +1,4 @@
+#include "common.h"
 
 class logamaticCan {
 
@@ -10,6 +11,10 @@ public:
     void setup();
     void loop();
     void mqttRecv(char* topic, byte* payload, unsigned int length);
+    const char* sub_topic() {
+        const char* t = TOPIC_PREFIX "can/send";
+        return t;
+    }
 
 };
 

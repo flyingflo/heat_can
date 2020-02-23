@@ -97,6 +97,7 @@ bool try_mqtt_reconnect() {
     mqttClient.publish(topic_status_conn, "Online, HELLO", true);
     // ... and resubscribe
     mqttClient.subscribe(topic_sub);
+    mqttClient.subscribe(LogamaticCAN.sub_topic());
     _pub_lockout = true;
     return true;
   } else {
