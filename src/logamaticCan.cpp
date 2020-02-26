@@ -35,7 +35,7 @@ void logamaticCan::setup() {
 }
 
 void logamaticCan::mqttRecv(char* topic, byte* payload, unsigned int length) {
-    if (strcmp(TOPIC_PREFIX "can/send", topic) == 0 && length > 0) {
+    if (strcmp(send_topic, topic) == 0 && length > 0) {
         handleSend(payload, length);
     }
 }
@@ -51,7 +51,10 @@ void logamaticCan::handleSend(byte* payload, unsigned int length) {
             &rtr, &id, &data[0], &data[1], &data[2], &data[3], 
             &data[4], &data[5], &data[6], &data[7]);
     if (r != 10) {
-        // just ignore invalid formated payloads
+        const char errmsg[] = "MQTT payload";
+        mqttClient.beginPublish(TOPIC_PREFIX "can/err", sizeof(errmsg), false);
+        mqttClient.write((uint8_t*)errmsg, sizeof(errmsg));
+        mqttClient.endPublish();
         return;
     }
     bool ok = CAN.beginPacket(id, rtr) &&
@@ -59,9 +62,16 @@ void logamaticCan::handleSend(byte* payload, unsigned int length) {
     CAN.endPacket();
 
     if (!ok) {
-        const char errmsg[] = "Error CAN write";
-        mqttClient.beginPublish(TOPIC_PREFIX "/can/err", sizeof(errmsg), false);
+        const char errmsg[] = "CAN write";
+        mqttClient.beginPublish(TOPIC_PREFIX "can/err", sizeof(errmsg), false);
         mqttClient.write((uint8_t*)errmsg, sizeof(errmsg));
+        mqttClient.endPublish();
+    } else {
+        const char msg[] = "CAN write success";
+        mqttClient.beginPublish(TOPIC_PREFIX "can/dbg", sizeof(msg), false);
+        mqttClient.write((uint8_t*)msg, sizeof(msg));
+        mqttClient.endPublish();
+
     }
 }
 

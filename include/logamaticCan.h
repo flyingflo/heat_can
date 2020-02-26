@@ -11,10 +11,7 @@ public:
     void setup();
     void loop();
     void mqttRecv(char* topic, byte* payload, unsigned int length);
-    const char* sub_topic() {
-        const char* t = TOPIC_PREFIX "can/send";
-        return t;
-    }
+    const char*  send_topic = TOPIC_PREFIX "can/raw/send";
 
 };
 
