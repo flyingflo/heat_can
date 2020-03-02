@@ -49,6 +49,9 @@ public:
   virtual int loopback();
   virtual int sleep();
   virtual int wakeup();
+  virtual int normalMode() {
+    return wakeup();
+  }
 
   virtual uint8_t readTEC();    //< Transmit error counter
   virtual uint8_t readREC();    //< Receive error counter
