@@ -29,6 +29,7 @@ void logamaticCan::setup() {
     Serial.print(bitrates[_bitrateIdx]);
     Serial.print(")-> ");
     Serial.println(rc);
+    // CAN.loopback();
     if (rc == 1) {
         // CAN.onReceive(onReceive);
     }
@@ -57,13 +58,13 @@ void logamaticCan::handleSend(byte* payload, unsigned int length) {
         mqttClient.endPublish();
         return;
     }
-    bool ok = CAN.beginPacket(id, rtr) &&
+    bool ok = CAN.beginPacket(id, 8, rtr) &&
     CAN.write(data, 8) == 8 &&
     CAN.endPacket();
 
     if (!ok) {
         const char errmsg[] = "CAN write";
-        mqttClient.beginPublish(TOPIC_PREFIX "can/err", sizeof(errmsg), false);
+        mqttClient.beginPublish(TOPIC_PREFIX "can/error/write", sizeof(errmsg), false);
         mqttClient.write((uint8_t*)errmsg, sizeof(errmsg));
         mqttClient.endPublish();
     } else {
