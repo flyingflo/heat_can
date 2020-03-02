@@ -13,6 +13,12 @@ public:
     void mqttRecv(char* topic, byte* payload, unsigned int length);
     const char*  send_topic = TOPIC_PREFIX "can/raw/send";
 
+    int _rec = -1;   //< Receive error counter
+    int _tec = -1;   //< Transmit error counter
+    int _eflg = -1;  //< Error flags
+    
+    void checkErrors();
+
 };
 
 extern logamaticCan LogamaticCAN;

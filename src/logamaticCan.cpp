@@ -91,9 +91,25 @@ void logamaticCan::handleRecv() {
     }
 }
 
+void logamaticCan::checkErrors() {
+    int tec = CAN.readTEC();
+    int rec = CAN.readREC();
+    int eflg = CAN.readEFLG();
+    if (tec != _tec || rec != _rec || eflg != _eflg) {
+        char buf[32];
+        int l = snprintf(buf, sizeof(buf), "EFLG:%x TEC:%x REC:%x", eflg, tec, rec);
+        mqttClient.beginPublish(TOPIC_PREFIX "can/error/regs", l, true);
+        mqttClient.write((uint8_t*)buf, l);
+        mqttClient.endPublish();
+    }
+    _tec = tec;
+    _rec = rec;
+    _eflg = eflg;
+}
+
 void logamaticCan::loop() {
     handleRecv();
-
+    checkErrors();
 }
 
 logamaticCan LogamaticCAN;
