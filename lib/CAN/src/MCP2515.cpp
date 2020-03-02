@@ -10,12 +10,17 @@
 
 #define REG_CANCTRL                0x0f
 
+#define REG_TEC                    0x1c
+#define REG_REC                    0x1d
+
 #define REG_CNF3                   0x28
 #define REG_CNF2                   0x29
 #define REG_CNF1                   0x2a
 
 #define REG_CANINTE                0x2b
 #define REG_CANINTF                0x2c
+
+#define REG_EFLG                   0x2d
 
 #define FLAG_RXnIE(n)              (0x01 << n)
 #define FLAG_RXnIF(n)              (0x01 << n)
@@ -436,6 +441,19 @@ void MCP2515Class::reset()
   SPI.endTransaction();
 
   delayMicroseconds(10);
+}
+
+uint8_t MCP2515Class::readTEC()
+{
+  return readRegister(REG_TEC);
+}
+uint8_t MCP2515Class::readREC()
+{
+  return readRegister(REG_REC);
+}
+uint8_t MCP2515Class::readEFLG()
+{
+  return readRegister(REG_EFLG);
 }
 
 void MCP2515Class::handleInterrupt()
