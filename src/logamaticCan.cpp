@@ -92,12 +92,26 @@ void logamaticCan::handleRecv() {
 }
 
 void logamaticCan::checkErrors() {
+    static unsigned long last_check = 0;
+    unsigned long now = millis();
+    if (now - last_check < 5000) {
+        return;
+    }
+    last_check = now;
     int tec = CAN.readTEC();
     int rec = CAN.readREC();
     int eflg = CAN.readEFLG();
+    const int recv_ov_bit0 = 0x40;
+    const int recv_ov_bit1 = 0x80;
+    const int recv_ov_bits = recv_ov_bit0 | recv_ov_bit1;
+
+    if (eflg & recv_ov_bits) {
+        _recv_overflows++;
+        CAN.clearEFLG();
+    }
     if (tec != _tec || rec != _rec || eflg != _eflg) {
         char buf[32];
-        int l = snprintf(buf, sizeof(buf), "EFLG:%x TEC:%x REC:%x", eflg, tec, rec);
+        int l = snprintf(buf, sizeof(buf), "EFLG:%x TEC:%x REC:%x ROF:%u", eflg, tec, rec, _recv_overflows);
         mqttClient.beginPublish(TOPIC_PREFIX "can/error/regs", l, true);
         mqttClient.write((uint8_t*)buf, l);
         mqttClient.endPublish();

@@ -16,6 +16,7 @@ public:
     int _rec = -1;   //< Receive error counter
     int _tec = -1;   //< Transmit error counter
     int _eflg = -1;  //< Error flags
+    unsigned int _recv_overflows = 0;
     
     void checkErrors();
 
