@@ -456,6 +456,11 @@ uint8_t MCP2515Class::readEFLG()
   return readRegister(REG_EFLG);
 }
 
+void MCP2515Class::clearEFLG() 
+{
+  modifyRegister(REG_EFLG, 0x80 | 0x40, 0);
+}
+
 void MCP2515Class::handleInterrupt()
 {
   if (readRegister(REG_CANINTF) == 0) {

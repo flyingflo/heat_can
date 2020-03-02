@@ -53,6 +53,7 @@ public:
   virtual uint8_t readTEC();    //< Transmit error counter
   virtual uint8_t readREC();    //< Receive error counter
   virtual uint8_t readEFLG();   //< Error flag registerf
+  virtual void clearEFLG();     //< Clear receiver buffer overflow bits 0 and 1
 
   void setPins(int cs = MCP2515_DEFAULT_CS_PIN, int irq = MCP2515_DEFAULT_INT_PIN);
   void setSPIFrequency(uint32_t frequency);
